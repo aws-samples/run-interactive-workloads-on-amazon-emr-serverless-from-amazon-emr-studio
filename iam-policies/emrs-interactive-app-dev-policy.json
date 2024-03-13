@@ -1,0 +1,107 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowServerlessActions",
+            "Action": [
+                "emr-serverless:CreateApplication",
+                "emr-serverless:UpdateApplication",
+                "emr-serverless:DeleteApplication",
+                "emr-serverless:ListApplications",
+                "emr-serverless:GetApplication",
+                "emr-serverless:StartApplication",
+                "emr-serverless:StopApplication",
+                "emr-serverless:StartJobRun",
+                "emr-serverless:CancelJobRun",
+                "emr-serverless:ListJobRuns",
+                "emr-serverless:GetJobRun",
+                "emr-serverless:GetDashboardForJobRun",
+                "emr-serverless:AccessInteractiveEndpoints"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Sid": "AllowEMRStudioBasicActions",
+            "Action": [
+                "elasticmapreduce:CreateEditor",
+                "elasticmapreduce:DescribeEditor",
+                "elasticmapreduce:ListEditors",
+                "elasticmapreduce:UpdateStudio",
+                "elasticmapreduce:StartEditor",
+                "elasticmapreduce:StopEditor",
+                "elasticmapreduce:DeleteEditor",
+                "elasticmapreduce:OpenEditorInConsole",
+                "elasticmapreduce:AttachEditor",
+                "elasticmapreduce:DetachEditor",
+                "elasticmapreduce:DescribeStudio",
+                "elasticmapreduce:ListStudios"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Sid": "AllowPassingRuntimeRoleForRunningEMRServerlessJob",
+            "Action": "iam:PassRole",
+            "Resource": [
+                "arn:aws:iam::*:role/emr-serverless-runtime-role",
+                "arn:aws:iam::*:role/emr-studio-service-role"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Sid": "AllowS3ListAndGetPermissions",
+            "Action": [
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket",
+                "s3:GetBucketLocation",
+                "s3:GetObject"
+            ],
+            "Resource": "arn:aws:s3:::*",
+            "Effect": "Allow"
+        },
+        {
+            "Sid": "DescribeNetworkforServerlessApplication",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeVpcs",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ListIAMRoles",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ListRoles"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AllowEC2ENICreationWithEMRServerlessTags",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateNetworkInterface"
+            ],
+            "Resource": [
+		 "arn:aws:ec2:*:*:subnet/*",
+		 "arn:aws:ec2:*:*:security-group/*",
+                "arn:aws:ec2:*:*:network-interface/*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "aws:CalledViaLast": "ops.emr-serverless.amazonaws.com"
+                }
+            }
+        },
+	{
+	    "Sid": "AllowCreateStudioPresignedUrl",
+    "Action": [
+		"elasticmapreduce:CreateStudioPresignedUrl"
+	    ],
+	    "Resource": "arn:aws:elasticmapreduce:us-west-2:<account-id>:studio/*",
+	    "Effect": "Allow"	    
+	}
+    ]
+}
