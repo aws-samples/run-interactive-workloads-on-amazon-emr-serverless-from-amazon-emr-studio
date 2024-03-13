@@ -15,6 +15,8 @@ On [VPC Management console](http://console.aws.amazon.com/vpcconsole), choose **
 
 On IAM console, create an IAM policy using the following policy document. Replace the \<account-id\> and \<region\> with your account number and region. We name the policy as **emr-serverless-s3-runtime-policy**. The permissions in this policy are needed to access sample data from a public S3 bucket and read and write access to your S3 bucket. We also provide access to the [AWS Glue Data Catalog](https://docs.aws.amazon.com/glue/latest/dg/catalog-and-crawler.html), a centralized metadata repository for all your data assets across various data sources,which is commonly needed in most workloads.
 
+[emr-serverless-s3-runtime-policy](iam-policies/emr-serverless-s3-runtime-policy.json)
+
 **emr-serverless-s3-runtime-policy**
 
 {
