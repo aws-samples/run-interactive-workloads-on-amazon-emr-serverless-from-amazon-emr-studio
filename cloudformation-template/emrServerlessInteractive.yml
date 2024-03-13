@@ -1,0 +1,429 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: emrs
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub 'emrserverless-interactive-blog-${AWS::AccountId}-${AWS::Region}'
+  emrServerlessRuntimeRolePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Roles:
+        - !Ref emrServerlessRunTimeRole
+      PolicyName: emr-serverless-s3-runtime-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ReadAccessForEMRSamples
+            Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:ListBucket'
+            Resource:
+              - 'arn:aws:s3:::*.elasticmapreduce'
+              - 'arn:aws:s3:::*.elasticmapreduce/*'
+          - Sid: FullAccessToS3Bucket
+            Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              - 's3:DeleteObject'
+            Resource:
+              - !Sub 'arn:aws:s3:::emrserverless-interactive-blog-${AWS::AccountId}*'
+              - 'arn:aws:s3:::athena-examples-us-east-1'
+              - 'arn:aws:s3:::athena-examples-us-east-1/*'
+          - Sid: GlueCreateAndReadDataCatalog
+            Effect: Allow
+            Action:
+              - 'glue:GetDatabase'
+              - 'glue:CreateDatabase'
+              - 'glue:GetDataBases'
+              - 'glue:CreateTable'
+              - 'glue:GetTable'
+              - 'glue:UpdateTable'
+              - 'glue:DeleteTable'
+              - 'glue:GetTables'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
+              - 'glue:CreatePartition'
+              - 'glue:BatchCreatePartition'
+              - 'glue:GetUserDefinedFunctions'
+            Resource:
+              - '*'
+  emrServerlessRunTimeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: emr-serverless-runtime-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: emr-serverless.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+  emrStudioServicePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Roles:
+        - !Ref emrStudioServiceRole
+      PolicyName: emr-studio-service-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ObjectActions
+            Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+            Resource:
+              - !Sub 'arn:aws:s3:::emrserverless-interactive-blog-${AWS::AccountId}*'
+          - Sid: BucketActions
+            Effect: Allow
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetEncryptionConfiguration'
+            Resource:
+              - !Sub 'arn:aws:s3:::emrserverless-interactive-blog-${AWS::AccountId}*'
+  emrStudioServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: emr-studio-service-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: elasticmapreduce.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+  emrUserPolicyvpc:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Users:
+        - !Ref emrStudioAdminUser
+        - !Ref emrStudioDevUser
+      PolicyName: emrs-vpc-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: DescribeNetwork
+            Effect: Allow
+            Action:
+              - 'ec2:DescribeVpcs'
+              - 'ec2:DescribeSubnets'
+              - 'ec2:DescribeSecurityGroups'
+            Resource: '*'
+          - Sid: AllowEC2ENICreationWithEMRServerlessTags
+            Effect: Allow
+            Action:
+              - 'ec2:CreateNetworkInterface'
+            Resource:
+              - 'arn:aws:ec2:*:*:subnet/*'
+              - 'arn:aws:ec2:*:*:security-group/*'
+              - 'arn:aws:ec2:*:*:network-interface/*'
+  emrStudioServerlessUserPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Users:
+        - !Ref emrStudioAdminUser
+        - !Ref emrStudioDevUser
+      PolicyName: emrs-interactive-app-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowServerlessActions
+            Action:
+              - 'emr-serverless:List*'
+              - 'emr-serverless:Get*'
+              - 'emr-serverless:*Application'
+              - 'emr-serverless:*JobRun'
+              - 'emr-serverless:AccessInteractiveEndpoints'
+            Resource: '*'
+            Effect: Allow
+  emrAdminUserPolicy1:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Users:
+        - !Ref emrStudioAdminUser
+      PolicyName: emrs-interactive-app-admin-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStudioandWorkspaceActions
+            Action:
+              - 'elasticmapreduce:Describe*'
+              - 'elasticmapreduce:List*'
+              - 'elasticmapreduce:*Editor*'
+              - 'elasticmapreduce:*Studio*'
+            Resource: '*'
+            Effect: Allow
+          - Sid: AllowS3ListAndGetPermissions
+            Action:
+              - 's3:ListAllMyBuckets'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:GetObject'
+            Resource: 'arn:aws:s3:::*'
+            Effect: Allow
+          - Sid: AllowPassingServiceRoleForWorkspaceCreation
+            Action:
+              - 'iam:PassRole'
+            Resource:
+              - 'arn:aws:iam::*:role/emr-studio-service-role'
+              - 'arn:aws:iam::*:role/emr-serverless-runtime-role'
+            Effect: Allow
+          - Sid: AllowListingRolesForChoosingServiceRoleWhenConfiguringStudio
+            Action:
+              - 'iam:ListRoles'
+            Resource:
+              - 'arn:aws:iam::*:role/'
+            Effect: Allow
+          - Sid: AllowEMRServerlessServiceLinkedRoleCreation
+            Effect: Allow
+            Action: 'iam:CreateServiceLinkedRole'
+            Resource: >-
+              arn:aws:iam::*:role/aws-service-role/ops.emr-serverless.amazonaws.com/AWSServiceRoleForAmazonEMRServerless
+  emrStudioAdminUser:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: emrs-interactive-app-admin-user
+      Path: /
+      LoginProfile:
+        Password: myP@ssW0rd
+  emrStudioInteractiveDevUserPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Users:
+        - !Ref emrStudioDevUser
+      PolicyName: emrs-interactive-app-dev-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowEMRStudioBasicActions
+            Action:
+              - 'elasticmapreduce:*Editor*'
+              - 'elasticmapreduce:DescribeStudio'
+              - 'elasticmapreduce:ListStudios'
+            Resource: '*'
+            Effect: Allow
+          - Sid: AllowPassingRuntimeRoleForRunningEMRServerlessJob
+            Action: 'iam:PassRole'
+            Resource:
+              - 'arn:aws:iam::*:role/emr-serverless-runtime-role'
+              - 'arn:aws:iam::*:role/emr-studio-service-role'
+            Effect: Allow
+          - Sid: AllowS3ListAndGetPermissions
+            Action:
+              - 's3:ListAllMyBuckets'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:GetObject'
+            Resource: 'arn:aws:s3:::*'
+            Effect: Allow
+          - Sid: ListIAMRoles
+            Effect: Allow
+            Action:
+              - 'iam:ListRoles'
+            Resource: '*'
+          - Sid: AllowCreateStudioPresignedUrl
+            Effect: Allow
+            Action:
+              - 'elasticmapreduce:CreateStudioPresignedUrl'
+            Resource: !Join [ "", [ "arn:aws:elasticmapreduce:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":", "studio/", "*"] ]
+  emrStudioDevUser:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: emrs-interactive-app-dev-user
+      Path: /
+      LoginProfile:
+        Password: myP@ssW0rd
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.192.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentName, "vpc"] ]
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName        
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: 10.192.10.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentName, "subnet", "public1", !Select [ 0, !GetAZs '' ] ] ]
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: 10.192.11.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentName, "subnet", "public2", !Select [ 1, !GetAZs '' ] ] ]
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: 10.192.20.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentName, "subnet", "private1", !Select [ 0, !GetAZs '' ] ] ]
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: 10.192.21.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref EnvironmentName, "subnet", "private2", !Select [ 1, !GetAZs '' ] ] ]
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Routes
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+  # Security Groups
+  EMRServerlessSG:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: VPC
+    Properties:
+      GroupName: emr-serverless-sg
+      GroupDescription: "Security group for EMRServerless"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 0
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+  # Endpoints 
+  S3VPCEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      RouteTableIds:
+      - !Ref PrivateRouteTable1
+      - !Ref PrivateRouteTable2
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref VPC
+Outputs:
+  YourS3DataBucketName: 
+    Description: "S3 Bucket"
+    Value: !Ref S3Bucket
+  emrServerlessRunTimeRole:
+    Value: !Ref emrServerlessRunTimeRole
+  emrStudioServiceRole:
+    Value: !Ref emrStudioServiceRole
+  emrStudioAdminUser:
+    Value: !Ref emrStudioAdminUser
+  emrStudioAdminUserPassword:
+    Value: "myP@ssW0rd"
+  emrStudioInteractiveDevUserPolicy:
+    Value: !Ref emrStudioInteractiveDevUserPolicy
+  emrStudioDevUser:
+    Value: !Ref emrStudioDevUser
+  emrStudioDevUserPassword:
+    Value: "myP@ssW0rd"
+  VPC:
+    Value: !Ref VPC
+  PrivateSubnet1:
+    Value: !Ref PrivateSubnet1
+  PrivateSubnet2:
+    Value: !Ref PrivateSubnet2
