@@ -38,9 +38,7 @@ Create an EMR Studio administrator user with name **emrs-interactive-app-admin-u
 
 In the permissions page, select **Attach the policies directly** and select the **emrs-interactive-app-admin-policy** policy.
 
-![Shape1](RackMultipart20240121-1-12p2f1_html_9b0ea18d9b8950ab.gif)
-
-![](RackMultipart20240121-1-12p2f1_html_7f97f03f8a34a0.png)
+![images/attach-policy-to-studio-admin-iam-user.png](images/attach-policy-to-studio-admin-iam-user.png)
 
 Next choose **Create user** to create the EMR Studio administrator.
 
@@ -50,7 +48,7 @@ An EMR Studio Developer user is a persona that is assigned a workspace and EMR S
 
 In IAM console, create an EMR Interactive Studio user policy named **emrs-interactive-app-dev-policy** using the sample policy given below (replace \<account-id\>with your AWS account id):
 
-Here is a sample Studio data developer policy: [emrs-interactive-app-dev-polic](iam-policies/emrs-interactive-app-dev-policy.json)
+Here is a sample Studio data developer policy: [emrs-interactive-app-dev-policy](iam-policies/emrs-interactive-app-dev-policy.json)
 
 Create an EMR Studio developer user with name **emrs-interactive-app-dev-user** , providing management console access, choose **I want to create an IAM user**. Click Next. **Attach the policies directly** and select the **emrs-interactive-app-dev-policy** policy previously created and create user. Download the credentials for studio user as a CSV file and share it with your Data Developer.
 
