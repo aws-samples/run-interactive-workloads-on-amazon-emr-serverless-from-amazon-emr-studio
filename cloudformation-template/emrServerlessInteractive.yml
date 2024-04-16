@@ -425,14 +425,10 @@ Outputs:
     Value: !Ref emrStudioServiceRole
   emrStudioAdminUser:
     Value: !Ref emrStudioAdminUser
-  emrStudioAdminUserPassword:
-    Value: "myP@ssW0rd"
   emrStudioInteractiveDevUserPolicy:
     Value: !Ref emrStudioInteractiveDevUserPolicy
   emrStudioDevUser:
     Value: !Ref emrStudioDevUser
-  emrStudioDevUserPassword:
-    Value: "myP@ssW0rd"
   VPC:
     Value: !Ref VPC
   PrivateSubnet1:
